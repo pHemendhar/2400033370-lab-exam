@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive Calendar with Events and Month Navigation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    h2 {
+      text-align: center;
+      user-select: none;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      text-align: center;
+      margin-bottom: 15px;
+      user-select: none;
+    }
+    .weekday {
+      font-weight: bold;
+    }
+    .day {
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #f0f0f0;
+      transition: background-color 0.3s ease;
+    }
+    .day:hover {
+      background-color: #d0eaff;
+    }
+    .day.selected {
+      background-color: #007bff;
+      color: white;
+    }
+    .day.has-event {
+      font-weight: bold;
+      border: 2px solid #007bff;
+    }
+    .btn {
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .btn:active {
+      background-color: #0056b3;
+    }
+    .events {
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+    }
+    .event-item {
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    .event-title {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="calendar-header">
+    <button id="prevMonthBtn" class="btn" aria-label="Previous month">&#8592;</button>
+    <h2 id="monthYear"></h2>
+    <button id="nextMonthBtn" class="btn" aria-label="Next month">&#8594;</button>
+  </div>
+
+  <div id="calendar" class="calendar"></div>
+
+  <div id="eventDetails" class="events">
+    <p>Please select a date to see events.</p>
+  </div>
+
+  <script>
+    const events = [
+      { date: "2025-10-05", title: "Meeting with team", description: "Discuss project progress" },
+      { date: "2025-10-12", title: "Doctor appointment", description: "Annual health checkup" },
+      { date: "2025-10-17", title: "Birthday Party", description: "Friend's birthday celebration" },
+      { date: "2025-10-25", title: "Conference", description: "Attend tech conference" },
+      { date: "2025-11-12", title: "Workshop", description: "React workshop" }, 
+      { date: "2025-11-20", title: "Family Dinner", description: "Dinner with family" }
+    ];
+
+    let currentYear, currentMonth;
+    let selectedDateStr = null;
+    let selectedDayElem = null;
+
+    const monthYearElem = document.getElementById("monthYear");
+    const calendarElem = document.getElementById("calendar");
+    const eventDetailsElem = document.getElementById("eventDetails");
+    const prevMonthBtn = document.getElementById("prevMonthBtn");
+    const nextMonthBtn = document.getElementById("nextMonthBtn");
+
+    function formatDate(year, month, day) {
+      return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+
+    function renderCalendar(year, month) {
+      calendarElem.innerHTML = "";
+      monthYearElem.textContent = new Date(year, month).toLocaleString("default", {
+        month: "long",
+        year: "numeric",
+      });
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      // Weekday headers
+      const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      weekdays.forEach(day => {
+        const dayElem = document.createElement("div");
+        dayElem.classList.add("weekday");
+        dayElem.textContent = day;
+        calendarElem.appendChild(dayElem);
+      });
+
+      // Blank slots for offset in first week
+      for (let i = 0; i < firstDay; i++) {
+        const emptyElem = document.createElement("div");
+        calendarElem.appendChild(emptyElem);
+      }
+
+      // Days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = formatDate(year, month, day);
+        const dayElem = document.createElement("div");
+        dayElem.classList.add("day");
+        dayElem.textContent = day;
+
+        if (events.some(ev => ev.date === dateStr)) {
+          dayElem.classList.add("has-event");
+        }
+
+        if (selectedDateStr === dateStr) {
+          dayElem.classList.add("selected");
+          selectedDayElem = dayElem;
+        }
+
+        dayElem.addEventListener("click", () => selectDate(dateStr, dayElem));
+        calendarElem.appendChild(dayElem);
+      }
+    }
+
+    function selectDate(dateStr, dayElem) {
+      if (selectedDayElem) {
+        selectedDayElem.classList.remove("selected");
+      }
+      dayElem.classList.add("selected");
+      selectedDayElem = dayElem;
+      selectedDateStr = dateStr;
+      renderEvents(dateStr);
+    }
+
+    function renderEvents(dateStr) {
+      const matchedEvents = events.filter(ev => ev.date === dateStr);
+      if (matchedEvents.length === 0) {
+        eventDetailsElem.innerHTML = `<p>No events on ${dateStr}</p>`;
+        return;
+      }
+
+      eventDetailsElem.innerHTML = `<h3>Events on ${dateStr}</h3>` + matchedEvents.map(ev => `
+        <div class="event-item">
+          <div class="event-title">${ev.title}</div>
+          <div class="event-desc">${ev.description}</div>
+        </div>
+      `).join("");
+    }
+
+    prevMonthBtn.addEventListener("click", () => {
+      if (currentMonth === 0) {
+        currentMonth = 11;
+        currentYear--;
+      } else {
+        currentMonth--;
+      }
+      selectedDateStr = null;
+      selectedDayElem = null;
+      eventDetailsElem.innerHTML = `<p>Please select a date to see events.</p>`;
+      renderCalendar(currentYear, currentMonth);
+    });
+
+    nextMonthBtn.addEventListener("click", () => {
+      if (currentMonth === 11) {
+        currentMonth = 0;
+        currentYear++;
+      } else {
+        currentMonth++;
+      }
+      selectedDateStr = null;
+      selectedDayElem = null;
+      eventDetailsElem.innerHTML = `<p>Please select a date to see events.</p>`;
+      renderCalendar(currentYear, currentMonth);
+    });
+
+    function init() {
+      const today = new Date();
+      currentYear = today.getFullYear();
+      currentMonth = today.getMonth();
+      renderCalendar(currentYear, currentMonth);
+    }
+
+    init();
+  </script>
+</body>
+</html>
